@@ -57,6 +57,10 @@ The workflow deploys on every push, but GitHub needs to be told to use it once:
 After that, check the run under the **Actions** tab — it prints the live URL when
 it finishes.
 
+Note that this repo is currently private, and Pages on a private repo requires a
+paid plan (Pro/Team/Enterprise). On a free plan, make the repo public first —
+otherwise the deploy step has nowhere to publish to.
+
 ## Local preview
 
 ```sh
