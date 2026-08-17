@@ -1,0 +1,1420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Regulatory Affairs, From First Principles</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F6F4EF;
+  --paper:#FFFFFF;
+  --ink:#171A2B;
+  --ink-soft:#565C72;
+  --navy:#232A52;
+  --navy-deep:#161B36;
+  --amber:#E8A23A;
+  --amber-soft:#F6D9A8;
+  --coral:#D9503A;
+  --green:#2E8B57;
+  --line:rgba(23,26,43,0.14);
+  --shadow:0 14px 34px rgba(22,27,54,0.16);
+}
+*{box-sizing:border-box;}
+html,body{height:100%;}
+body{margin:0; background:var(--bg); color:var(--ink); font-family:'Inter',sans-serif; overflow:hidden;}
+::selection{background:var(--amber-soft);}
+h1,h2,h3,.display{font-family:'Space Grotesk',sans-serif; font-weight:700; letter-spacing:-0.01em;}
+.mono{font-family:'JetBrains Mono',monospace;}
+.eyebrow{font-family:'JetBrains Mono',monospace; font-size:11.5px; letter-spacing:0.12em; text-transform:uppercase; color:var(--coral); font-weight:600;}
+.tag{display:inline-block; font-family:'JetBrains Mono',monospace; font-size:10.5px; letter-spacing:0.1em; text-transform:uppercase; padding:4px 11px; border-radius:3px; margin-bottom:10px; color:#fff;}
+.tag.concept{background:var(--navy);}
+.tag.game{background:var(--amber); color:var(--navy-deep);}
+.tag.case{background:var(--coral);}
+.tag.tool{background:var(--green);}
+
+#app{position:relative; width:100vw; height:100vh; display:flex; flex-direction:column;}
+
+/* SLIM PROGRESS LINE + FLOATING CONTROLS (replaces old header) */
+#progressline{display:flex; align-items:center; gap:2px; height:4px; flex-shrink:0; background:var(--line);}
+.modseg{height:100%; flex:1; background:transparent; transition:background .3s;}
+.modseg.done{background:var(--amber);}
+#modlabel-float{position:fixed; top:14px; left:22px; z-index:40; font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--ink-soft); letter-spacing:.04em; transition:opacity .35s ease;}
+#controls{position:fixed; top:12px; right:18px; z-index:40; display:flex; align-items:center; gap:8px; transition:opacity .35s ease;}
+.hudchip{font-family:'JetBrains Mono',monospace; font-size:11.5px; border:1px solid var(--line); background:var(--paper); color:var(--navy-deep); padding:5px 12px; border-radius:16px; display:flex; gap:5px; align-items:center; box-shadow:0 2px 8px rgba(23,26,43,0.06);}
+.hudchip b{color:var(--coral);}
+.iconbtn{background:var(--navy-deep); border:none; color:#fff; border-radius:16px; padding:7px 15px; font-family:'JetBrains Mono',monospace; font-size:11.5px; cursor:pointer; box-shadow:0 2px 8px rgba(23,26,43,0.12);}
+.iconbtn:hover{background:var(--navy);}
+body.presenting #modlabel-float,
+body.presenting #controls{opacity:0; pointer-events:none;}
+body.presenting #modlabel-float.show,
+body.presenting #controls.show{opacity:1; pointer-events:auto;}
+body.presenting .slide{padding-top:64px;}
+
+/* DECK */
+#deck{flex:1; position:relative; overflow:hidden;}
+.slide{position:absolute; inset:0; padding:44px 76px 30px; display:none; flex-direction:column; justify-content:center; opacity:0; transform:translateY(10px); transition:opacity .3s ease, transform .3s ease; overflow-y:auto;}
+.slide.active{display:flex; opacity:1; transform:translateY(0);}
+.slide .inner{max-width:1180px; margin:0 auto; width:100%;}
+.slide h1.display{font-size:42px; line-height:1.08; margin:4px 0 14px; color:var(--navy-deep);}
+.slide h2.display{font-size:27px; margin:0 0 12px; color:var(--navy-deep);}
+.slide p.lead{font-size:16.5px; line-height:1.55; color:var(--ink-soft); max-width:840px; margin:0 0 6px;}
+
+.cols{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:16px;}
+.cols3{display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-top:16px;}
+.cols4{display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-top:16px;}
+.card{background:var(--paper); border:1px solid var(--line); border-radius:11px; padding:16px 18px; box-shadow:0 3px 10px rgba(23,26,43,0.05);}
+.card h3{font-size:15px; margin:0 0 6px; color:var(--navy);}
+.card p{font-size:13.3px; line-height:1.5; color:var(--ink-soft); margin:0;}
+.card .num{font-family:'JetBrains Mono',monospace; color:var(--amber); font-weight:700; font-size:12px;}
+
+table.reg{width:100%; border-collapse:collapse; margin-top:14px; font-size:13.3px;}
+table.reg th{text-align:left; font-family:'JetBrains Mono',monospace; font-size:10.5px; text-transform:uppercase; letter-spacing:0.05em; color:var(--coral); border-bottom:2px solid var(--navy); padding:7px 9px;}
+table.reg td{padding:8px 9px; border-bottom:1px solid var(--line); color:var(--ink-soft); vertical-align:top;}
+table.reg tr:last-child td{border-bottom:none;}
+table.reg td b{color:var(--navy-deep);}
+
+/* Flip cards */
+.flipgrid{display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-top:18px;}
+.flipcard{perspective:1000px; height:150px; cursor:pointer;}
+.flipinner{position:relative; width:100%; height:100%; transition:transform .5s; transform-style:preserve-3d;}
+.flipcard.flipped .flipinner{transform:rotateY(180deg);}
+.flipface{position:absolute; inset:0; backface-visibility:hidden; border-radius:12px; padding:16px; display:flex; flex-direction:column; justify-content:center;}
+.flipfront{background:var(--navy); color:#fff; text-align:center;}
+.flipfront .eyebrow{color:var(--amber-soft);}
+.flipfront b{font-family:'Space Grotesk',sans-serif; font-size:16px;}
+.flipback{background:var(--amber-soft); color:var(--navy-deep); transform:rotateY(180deg); font-size:13px; line-height:1.5;}
+
+/* GAME shared */
+.game-wrap{background:var(--paper); border:1px solid var(--line); border-radius:13px; padding:20px 22px; margin-top:12px; box-shadow:var(--shadow);}
+.game-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;}
+.game-title{font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:var(--navy);}
+.game-stats{display:flex; gap:10px; align-items:center;}
+.streakchip{font-family:'JetBrains Mono',monospace; font-size:11.5px; background:var(--amber-soft); color:var(--navy-deep); padding:3px 10px; border-radius:12px; font-weight:700;}
+.game-feedback{font-family:'JetBrains Mono',monospace; font-size:12.5px; min-height:18px; color:var(--green); font-weight:600;}
+.game-feedback.bad{color:var(--coral);}
+.explain-line{font-size:12.8px; color:var(--ink-soft); margin-top:6px; min-height:16px; font-style:italic;}
+.bins{display:grid; gap:10px; margin-top:8px;}
+.bin{border:2px dashed var(--line); border-radius:9px; padding:10px; min-height:60px; background:rgba(35,42,82,0.025);}
+.bin h4{margin:0 0 6px; font-size:12px; color:var(--navy); font-family:'JetBrains Mono',monospace; letter-spacing:.03em;}
+.pool{display:flex; flex-wrap:wrap; gap:7px; margin-top:12px;}
+.chip{background:var(--paper); border:1.5px solid var(--navy); color:var(--navy-deep); padding:7px 13px; border-radius:18px; font-size:12.8px; cursor:grab; user-select:none; transition:all .15s; font-weight:600;}
+.chip:hover{background:var(--navy); color:#fff; transform:translateY(-1px);}
+.chip.selected{background:var(--amber); border-color:var(--amber); color:var(--navy-deep);}
+.chip.placed{background:var(--green); border-color:var(--green); color:#fff; cursor:default; opacity:0.92;}
+.chip.wrongflash{animation:shake .4s;}
+.chip.dragover-target{outline:2px dashed var(--amber);}
+@keyframes shake{0%,100%{transform:translateX(0);}25%{transform:translateX(-5px);}75%{transform:translateX(5px);}}
+.slot{display:inline-flex; align-items:center; gap:5px; flex-wrap:wrap;}
+
+.opt-btn{display:block; width:100%; text-align:left; background:var(--paper); border:1.5px solid var(--line); border-radius:9px; padding:12px 14px; margin-bottom:8px; cursor:pointer; font-size:14px; color:var(--ink); transition:all .15s; font-family:'Inter',sans-serif;}
+.opt-btn:hover{border-color:var(--navy); background:rgba(35,42,82,0.04);}
+.opt-btn.correct{background:rgba(46,139,87,0.14); border-color:var(--green);}
+.opt-btn.incorrect{background:rgba(217,80,58,0.1); border-color:var(--coral);}
+.opt-btn:disabled{cursor:default;}
+.consequence{margin-top:12px; padding:14px 16px; border-radius:9px; background:var(--navy-deep); color:#fff; font-size:13.5px; line-height:1.5; display:none;}
+.consequence.show{display:block; animation:fadeIn .3s;}
+@keyframes fadeIn{from{opacity:0; transform:translateY(6px);}to{opacity:1; transform:translateY(0);}}
+.stepdot{display:flex; gap:6px; margin-bottom:10px;}
+.stepdot span{width:7px;height:7px;border-radius:50%; background:var(--line);}
+.stepdot span.on{background:var(--coral);}
+
+.order-list{list-style:none; margin:12px 0 0; padding:0; display:flex; flex-direction:column; gap:6px;}
+.order-item{background:var(--paper); border:1.5px solid var(--navy); border-radius:8px; padding:10px 14px; cursor:pointer; display:flex; align-items:center; gap:10px; font-size:13.3px;}
+.order-item .idx{font-family:'JetBrains Mono',monospace; color:var(--amber); font-weight:700; min-width:16px;}
+.order-item.locked{background:rgba(46,139,87,0.1); border-color:var(--green); cursor:default;}
+
+.poll-row{display:flex; align-items:center; gap:10px; margin-bottom:8px;}
+.poll-label{width:210px; font-size:13px; color:var(--ink-soft); flex-shrink:0;}
+.poll-bar-track{flex:1; height:22px; background:rgba(35,42,82,0.06); border-radius:5px; overflow:hidden;}
+.poll-bar-fill{height:100%; background:linear-gradient(90deg,var(--navy),var(--navy)); width:0%; transition:width .6s ease; border-radius:5px;}
+.poll-count{width:30px; text-align:right; font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--navy);}
+
+/* Calculator tool */
+.calc-wrap{display:grid; grid-template-columns:1fr 1fr; gap:22px; margin-top:14px;}
+.calc-input label{display:block; font-family:'JetBrains Mono',monospace; font-size:11.5px; color:var(--navy); margin-bottom:5px; text-transform:uppercase; letter-spacing:.05em;}
+.calc-input input[type=range]{width:100%;}
+.calc-input .val{font-family:'JetBrains Mono',monospace; font-size:13px; color:var(--coral); font-weight:600;}
+.calc-out{background:var(--navy-deep); color:#fff; border-radius:12px; padding:22px; text-align:center;}
+.calc-out .big{font-family:'JetBrains Mono',monospace; font-size:38px; color:var(--amber-soft); font-weight:700;}
+.calc-out .lbl{font-size:12px; color:rgba(255,255,255,0.7); margin-top:4px;}
+
+/* Timer/clock */
+.clockbox{display:flex; align-items:center; gap:10px; font-family:'JetBrains Mono',monospace; font-size:14px; color:var(--navy); margin-top:6px;}
+.clockbar{flex:1; height:10px; background:var(--line); border-radius:5px; overflow:hidden;}
+.clockfill{height:100%; background:var(--coral); width:100%; transition:width 1.4s linear;}
+
+/* Confetti */
+.confetti-piece{position:fixed; top:-10px; width:8px;height:14px; z-index:200; pointer-events:none; border-radius:2px;}
+
+/* NAV */
+#navbar{display:flex; align-items:center; justify-content:space-between; padding:11px 26px; background:var(--paper); border-top:1px solid var(--line); flex-shrink:0; transition:opacity .35s ease;}
+body.presenting #navbar{opacity:0; pointer-events:none;}
+body.presenting #navbar.visible{opacity:1; pointer-events:auto;}
+#navbar .navbtn{background:var(--navy-deep); color:#fff; border:none; padding:9px 18px; border-radius:7px; font-family:'Inter',sans-serif; font-weight:600; font-size:13.5px; cursor:pointer;}
+#navbar .navbtn:hover{background:var(--navy);}
+#navbar .navbtn:disabled{opacity:0.3; cursor:default;}
+#navbar .navbtn.secondary{background:transparent; color:var(--navy-deep); border:1.5px solid var(--navy-deep);}
+#slide-meta{font-family:'JetBrains Mono',monospace; font-size:11.5px; color:var(--ink-soft); display:flex; align-items:center; gap:12px;}
+#dots{display:flex; gap:4px; max-width:280px; overflow:hidden;}
+.dot{width:5px;height:5px;border-radius:50%; background:var(--line); flex-shrink:0;}
+.dot.on{background:var(--coral); width:15px; border-radius:3px;}
+
+@media (max-width: 960px){
+  .slide{padding:26px 18px;}
+  .cols,.cols3,.cols4,.calc-wrap,.flipgrid{grid-template-columns:1fr;}
+  #modlabel-float{display:none;}
+  .slide h1.display{font-size:28px;}
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div id="progressline"></div>
+  <div id="modlabel-float">Module 0 · Orientation</div>
+  <div id="controls">
+    <div class="hudchip">STREAK <b id="streak-val">0</b></div>
+    <div class="hudchip">SCORE <b id="score-val">0</b></div>
+    <button class="iconbtn" id="presentBtn" onclick="togglePresent()">⛶ Present</button>
+  </div>
+
+  <div id="deck">
+
+    <!-- 0 TITLE -->
+    <section class="slide" id="s0" data-mod="0" data-modname="Orientation">
+      <div class="inner" style="text-align:center;">
+        <div class="eyebrow" style="display:block; margin-bottom:14px;">An interactive primer for new Regulatory Affairs professionals</div>
+        <h1 class="display" style="font-size:52px; text-align:center;">Regulatory Affairs,<br>From First Principles</h1>
+        <p class="lead" style="margin:0 auto 16px; text-align:center;">No prior background assumed. We'll build the whole picture — from drug discovery to post-approval maintenance — one concept at a time, with games and case studies along the way.</p>
+      </div>
+    </section>
+
+    <!-- 1 AGENDA -->
+    <section class="slide" id="s1" data-mod="0" data-modname="Orientation">
+      <div class="inner">
+        <div class="tag concept">What we'll cover</div>
+        <h2 class="display">16 modules, three angles on every topic</h2>
+        <p class="lead">Each module gives you the <b>concept</b> in plain language, then either a <b>game</b> to lock it in or a <b>case study</b> to apply it to a realistic decision.</p>
+        <div class="cols4" style="margin-top:18px;">
+          <div class="card"><span class="num">01</span><h3>What is RA?</h3><p>The role, in one idea.</p></div>
+          <div class="card"><span class="num">02</span><h3>Global landscape</h3><p>How many bodies, how many regions.</p></div>
+          <div class="card"><span class="num">03</span><h3>Drug discovery</h3><p>Step by step, with RA touchpoints marked.</p></div>
+          <div class="card"><span class="num">04</span><h3>Regulatory strategy</h3><p>The roadmap before the science even starts.</p></div>
+          <div class="card"><span class="num">05</span><h3>Preclinical → Clinical</h3><p>IND/CTA and the phase system.</p></div>
+          <div class="card"><span class="num">06</span><h3>CMC</h3><p>Proving a drug can be made, safely, every time.</p></div>
+          <div class="card"><span class="num">07</span><h3>Submission &amp; CTD</h3><p>What a dossier actually contains.</p></div>
+          <div class="card"><span class="num">08</span><h3>Regulatory Operations</h3><p>The technical machinery behind a filing.</p></div>
+          <div class="card"><span class="num">09</span><h3>Regulatory Intelligence</h3><p>Watching the world so the plan stays current.</p></div>
+          <div class="card"><span class="num">10</span><h3>Review &amp; outcomes</h3><p>Pathways, timelines, and how "yes" happens.</p></div>
+          <div class="card"><span class="num">11</span><h3>Post-approval</h3><p>What happens after the drug is on shelf.</p></div>
+          <div class="card"><span class="num">12</span><h3>Business case for RA</h3><p>Why commercial teams need this function.</p></div>
+          <div class="card"><span class="num">13</span><h3>Market-by-market access</h3><p>Why "approved" isn't the same everywhere.</p></div>
+          <div class="card"><span class="num">14</span><h3>Cross-functional teamwork</h3><p>Who owns what, day to day.</p></div>
+          <div class="card" style="background:var(--navy-deep); color:#fff; border:none;"><span class="num" style="color:var(--amber-soft);">15</span><h3 style="color:#fff;">Final quiz</h3><p style="color:var(--amber-soft);">Everything, rapid-fire.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2 ICEBREAKER: MYTH VS FACT -->
+    <section class="slide" id="s2" data-mod="0" data-modname="Orientation">
+      <div class="inner">
+        <div class="tag game">Warm-up game</div>
+        <h2 class="display">Myth or Fact?</h2>
+        <p class="lead">Five common assumptions about regulatory affairs. Tap True or False for each — you'll get the real answer instantly.</p>
+        <div class="game-wrap">
+          <div class="game-head"><div class="game-title" id="mf-title">Statement 1 of 5</div><div class="game-stats"><span class="streakchip" id="mf-streak">streak 0</span></div></div>
+          <p style="font-size:16px; font-weight:600; color:var(--navy-deep);" id="mf-statement">Loading…</p>
+          <div style="display:flex; gap:12px;">
+            <button class="navbtn" style="flex:1;" onclick="mfAnswer(true)">TRUE</button>
+            <button class="navbtn secondary" style="flex:1;" onclick="mfAnswer(false)">FALSE</button>
+          </div>
+          <div class="consequence" id="mf-out"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3 CONCEPT: what is RA (flip cards) -->
+    <section class="slide" id="s3" data-mod="1" data-modname="What is Regulatory Affairs?">
+      <div class="inner">
+        <div class="tag concept">Module 01 · Concept</div>
+        <h2 class="display">What is Regulatory Affairs, really?</h2>
+        <p class="lead">RA is the function that connects the science of a medicine to the legal permission to sell it. Tap each card to see what that means in practice.</p>
+        <div class="flipgrid" id="flipgrid"></div>
+      </div>
+    </section>
+
+    <!-- 4 CONCEPT: global landscape -->
+    <section class="slide" id="s4" data-mod="2" data-modname="The Global Regulatory Landscape">
+      <div class="inner">
+        <div class="tag concept">Module 02 · Concept</div>
+        <h2 class="display">How many regulatory bodies are there?</h2>
+        <p class="lead">Roughly 190 countries each have some form of medicines regulator — but a handful of major agencies set the standards that ripple globally through reliance and harmonisation.</p>
+        <table class="reg">
+          <tr><th>Region</th><th>Authority</th></tr>
+          <tr><td>United States</td><td><b>FDA</b> — Food and Drug Administration</td></tr>
+          <tr><td>European Union</td><td><b>EMA</b> + national competent authorities</td></tr>
+          <tr><td>United Kingdom</td><td><b>MHRA</b></td></tr>
+          <tr><td>Japan</td><td><b>PMDA</b></td></tr>
+          <tr><td>China</td><td><b>NMPA</b></td></tr>
+          <tr><td>India</td><td><b>CDSCO</b> under the DCGI</td></tr>
+        </table>
+        <p style="margin-top:12px; font-size:13px; color:var(--ink-soft);"><b style="color:var(--coral);">ICH</b> (International Council for Harmonisation) is not a regulator itself — it's where major agencies agree on common guidelines like the CTD format, so a sponsor doesn't have to reinvent the dossier for every country.</p>
+      </div>
+    </section>
+
+    <!-- 5 GAME: match authority to region -->
+    <section class="slide" id="s5" data-mod="2" data-modname="The Global Regulatory Landscape">
+      <div class="inner">
+        <div class="tag game">Game</div>
+        <h2 class="display">Match the authority to its region</h2>
+        <p class="lead">Tap an authority, then tap its region.</p>
+        <div class="game-wrap">
+          <div class="game-head"><div class="game-title" id="fb-game0-title">0 / 8 matched</div><div class="game-stats"><span class="streakchip" id="g0-streak">streak 0</span></div></div>
+          <div class="pool" id="game0-pool"></div>
+          <div class="bins" style="grid-template-columns:repeat(4,1fr); display:grid; margin-top:12px;" id="game0-bins"></div>
+          <div class="explain-line" id="g0-explain"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6 CONCEPT: drug discovery steps -->
+    <section class="slide" id="s6" data-mod="3" data-modname="Drug Discovery, Step by Step">
+      <div class="inner">
+        <div class="tag concept">Module 03 · Concept</div>
+        <h2 class="display">Drug discovery, step by step</h2>
+        <div class="cols4">
+          <div class="card"><h3>1 · Target ID</h3><p>Find a biological target (receptor, enzyme, pathway) linked to the disease.</p></div>
+          <div class="card"><h3>2 · Hit finding</h3><p>Screen thousands of compounds; keep the ones that bind the target.</p></div>
+          <div class="card"><h3>3 · Lead optimization</h3><p>Refine the best hits for potency, safety, and drug-like properties.</p></div>
+          <div class="card"><h3>4 · Candidate + preclinical</h3><p>Pick one molecule; run tox, pharmacology and ADME studies before humans.</p></div>
+        </div>
+        <div class="card" style="margin-top:14px; background:var(--navy-deep); border:none;"><h3 style="color:#fff;">Where regulatory comes in — from day one</h3><p style="color:var(--amber-soft);">RA helps shape the Target Product Profile, scans the competitive/regulatory landscape, and starts planning which regions and pathway make sense — long before any patient is dosed.</p></div>
+      </div>
+    </section>
+
+    <!-- 7 GAME: sequence discovery -->
+    <section class="slide" id="s7" data-mod="3" data-modname="Drug Discovery, Step by Step">
+      <div class="inner">
+        <div class="tag game">Game</div>
+        <h2 class="display">Put the discovery pipeline in order</h2>
+        <p class="lead">Tap the steps in the correct sequence, earliest to latest.</p>
+        <div class="game-wrap">
+          <div class="game-head"><div class="game-title" id="fb-game2">Pick the first step</div><div class="game-stats"><span class="streakchip" id="g2-streak">streak 0</span></div></div>
+          <div class="pool" id="game2-pool"></div>
+          <ol class="order-list" id="game2-order"></ol>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8 CONCEPT: regulatory strategy -->
+    <section class="slide" id="s8" data-mod="4" data-modname="Regulatory Strategy">
+      <div class="inner">
+        <div class="tag concept">Module 04 · Concept</div>
+        <h2 class="display">What is Regulatory Strategy?</h2>
+        <p class="lead">The roadmap that decides <b>how</b> a molecule gets to approval — before a single pivotal trial starts.</p>
+        <div class="cols">
+          <div class="card"><h3>Pathway choice</h3><p>Standard review, or does the data support an expedited route?</p></div>
+          <div class="card"><h3>Region sequencing</h3><p>Which markets first, and in what order, based on unmet need and evidence readiness?</p></div>
+          <div class="card"><h3>Data package planning</h3><p>What studies are truly required — no more, no less — to support the claim?</p></div>
+          <div class="card"><h3>Agency engagement plan</h3><p>Which meetings to request, and when, to reduce risk before big investments.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9 CASE STUDY 1: choose strategy (multi-step) -->
+    <section class="slide" id="s9" data-mod="4" data-modname="Regulatory Strategy">
+      <div class="inner">
+        <div class="tag case">Case Study 01</div>
+        <h2 class="display">Choose the regulatory strategy</h2>
+        <div class="stepdot" id="cs1-dots"><span></span><span></span></div>
+        <div id="cs1-body"></div>
+      </div>
+    </section>
+
+    <!-- 10 CONCEPT: preclinical to clinical -->
+    <section class="slide" id="s10" data-mod="5" data-modname="Preclinical to Clinical Checkpoints">
+      <div class="inner">
+        <div class="tag concept">Module 05 · Concept</div>
+        <h2 class="display">The first regulatory gate: IND / CTA</h2>
+        <p class="lead">Before dosing any human, a sponsor must file for permission — same idea, different name by region.</p>
+        <table class="reg">
+          <tr><th>Region</th><th>Filing</th></tr>
+          <tr><td>United States</td><td><b>IND</b> — Investigational New Drug application, to FDA</td></tr>
+          <tr><td>European Union</td><td><b>CTA</b> — Clinical Trial Application, via the CTIS portal</td></tr>
+          <tr><td>India</td><td><b>Form CT-04</b> under the New Drugs and Clinical Trials Rules, 2019</td></tr>
+        </table>
+        <h2 class="display" style="margin-top:18px; font-size:22px;">The four clinical phases</h2>
+        <table class="reg">
+          <tr><th>Phase</th><th>Goal</th></tr>
+          <tr><td><b>I</b></td><td>Safety, tolerability, dose range — small group, often healthy volunteers</td></tr>
+          <tr><td><b>II</b></td><td>Does it work? Proof of concept in patients</td></tr>
+          <tr><td><b>III</b></td><td>Confirm efficacy and safety in a large population, vs. comparator</td></tr>
+          <tr><td><b>IV</b></td><td>Post-marketing surveillance once approved</td></tr>
+        </table>
+      </div>
+    </section>
+
+    <!-- 11 GAME: IND-enabling package sort -->
+    <section class="slide" id="s11" data-mod="5" data-modname="Preclinical to Clinical Checkpoints">
+      <div class="inner">
+        <div class="tag game">Game</div>
+        <h2 class="display">Build the first-in-human package</h2>
+        <p class="lead">Tap each item, then tap the bin it belongs in.</p>
+        <div class="game-wrap">
+          <div class="game-head"><div class="game-title" id="fb-game1">0 / 8 placed</div><div class="game-stats"><span class="streakchip" id="g1-streak">streak 0</span></div></div>
+          <div class="bins" style="grid-template-columns:1fr 1fr; display:grid;">
+            <div class="bin" id="bin-include"><h4>✓ Needed before first-in-human</h4><div class="slot" id="slot-include"></div></div>
+            <div class="bin" id="bin-notyet"><h4>✕ Not needed at this stage</h4><div class="slot" id="slot-notyet"></div></div>
+          </div>
+          <div class="pool" id="game1-pool"></div>
+          <div class="explain-line" id="g1-explain"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 12 CONCEPT: CMC -->
+    <section class="slide" id="s12" data-mod="6" data-modname="What is CMC?">
+      <div class="inner">
+        <div class="tag concept">Module 06 · Concept</div>
+        <h2 class="display">What is CMC (Chemistry, Manufacturing &amp; Controls)?</h2>
+        <p class="lead">CMC proves the drug can be made — safely, consistently, at scale, every single batch.</p>
+        <div class="cols3">
+          <div class="card"><h3>Drug substance</h3><p>The active ingredient itself: how it's synthesised and controlled.</p></div>
+          <div class="card"><h3>Drug product</h3><p>The finished dose form — tablet, injection — including formulation and packaging.</p></div>
+          <div class="card"><h3>Specifications &amp; stability</h3><p>Quality limits the product must meet, and how long it stays within them.</p></div>
+        </div>
+        <p style="margin-top:12px; font-size:13.5px; color:var(--ink-soft);">CMC data fills <b>CTD Module 3</b> — and any change to how the drug is made later usually triggers a regulatory variation.</p>
+      </div>
+    </section>
+
+    <!-- 13 GAME: CMC or not -->
+    <section class="slide" id="s13" data-mod="6" data-modname="What is CMC?">
+      <div class="inner">
+        <div class="tag game">Game · beat the clock</div>
+        <h2 class="display">CMC or not CMC?</h2>
+        <p class="lead">Sort each item before the timer runs out.</p>
+        <div class="game-wrap">
+          <div class="game-head"><div class="game-title" id="fb-game3">0 / 8 sorted</div><div class="game-stats"><span class="streakchip" id="g3-streak">streak 0</span><button class="iconbtn" onclick="startClock()">Start 45s clock</button></div></div>
+          <div class="clockbox"><span class="mono" id="clock-val">45s</span><div class="clockbar"><div class="clockfill" id="clock-fill"></div></div></div>
+          <div class="bins" style="grid-template-columns:1fr 1fr; display:grid; margin-top:10px;">
+            <div class="bin" id="bin-cmc"><h4>✓ CMC</h4><div class="slot" id="slot-cmc"></div></div>
+            <div class="bin" id="bin-notcmc"><h4>✕ Not CMC</h4><div class="slot" id="slot-notcmc"></div></div>
+          </div>
+          <div class="pool" id="game3-pool"></div>
+          <div class="explain-line" id="g3-explain"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 14 CASE STUDY 2: manufacturing change -->
+    <section class="slide" id="s14" data-mod="6" data-modname="What is CMC?">
+      <div class="inner">
+        <div class="tag case">Case Study 02</div>
+        <h2 class="display">A manufacturing change lands on your desk</h2>
+        <div class="stepdot" id="cs2-dots"><span></span><span></span></div>
+        <div id="cs2-body"></div>
+      </div>
+    </section>
+
+    <!-- 15 CONCEPT: submission / CTD -->
+    <section class="slide" id="s15" data-mod="7" data-modname="What is Submission?">
+      <div class="inner">
+        <div class="tag concept">Module 07 · Concept</div>
+        <h2 class="display">What is a submission? The CTD explained</h2>
+        <p class="lead">A submission is the formal dossier a sponsor files asking for approval. Almost every major regulator now expects it in the ICH <b>Common Technical Document (CTD)</b> format.</p>
+        <table class="reg">
+          <tr><th>Module</th><th>Contents</th></tr>
+          <tr><td><b>M1</b></td><td>Region-specific admin info and labeling — not harmonised</td></tr>
+          <tr><td><b>M2</b></td><td>Summaries — quality, nonclinical, and clinical overviews</td></tr>
+          <tr><td><b>M3</b></td><td>Quality / CMC data</td></tr>
+          <tr><td><b>M4</b></td><td>Nonclinical study reports</td></tr>
+          <tr><td><b>M5</b></td><td>Clinical study reports</td></tr>
+        </table>
+      </div>
+    </section>
+
+    <!-- 16 GAME: file into CTD -->
+    <section class="slide" id="s16" data-mod="7" data-modname="What is Submission?">
+      <div class="inner">
+        <div class="tag game">Game</div>
+        <h2 class="display">File each document into the right module</h2>
+        <p class="lead">Tap a document, then tap its module.</p>
+        <div class="game-wrap">
+          <div class="game-head"><div class="game-title" id="fb-game4">0 / 10 filed</div><div class="game-stats"><span class="streakchip" id="g4-streak">streak 0</span></div></div>
+          <div class="bins" style="grid-template-columns:repeat(5,1fr); display:grid;">
+            <div class="bin" id="bin-m1"><h4>M1</h4><div class="slot" id="slot-m1"></div></div>
+            <div class="bin" id="bin-m2"><h4>M2</h4><div class="slot" id="slot-m2"></div></div>
+            <div class="bin" id="bin-m3"><h4>M3</h4><div class="slot" id="slot-m3"></div></div>
+            <div class="bin" id="bin-m4"><h4>M4</h4><div class="slot" id="slot-m4"></div></div>
+            <div class="bin" id="bin-m5"><h4>M5</h4><div class="slot" id="slot-m5"></div></div>
+          </div>
+          <div class="pool" id="game4-pool"></div>
+          <div class="explain-line" id="g4-explain"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 17 CONCEPT: reg ops -->
+    <section class="slide" id="s17" data-mod="8" data-modname="Regulatory Operations">
+      <div class="inner">
+        <div class="tag concept">Module 08 · Concept</div>
+        <h2 class="display">What is Regulatory Operations?</h2>
+        <p class="lead">If Regulatory Affairs decides <i>what</i> to say, Regulatory Operations makes sure it's built, formatted, and delivered exactly the way the agency's system requires.</p>
+        <div class="cols">
+          <div class="card"><h3>eCTD publishing</h3><p>Assembling documents into the electronic Common Technical Document structure agencies can ingest.</p></div>
+          <div class="card"><h3>Submission gateways</h3><p>Transmitting the dossier through the agency's official electronic portal (e.g. FDA ESG, CTIS).</p></div>
+          <div class="card"><h3>Lifecycle &amp; hyperlinking</h3><p>Tracking every sequence submitted over a product's life, cross-referenced and navigable.</p></div>
+          <div class="card"><h3>Technical validation</h3><p>Checking the submission against the agency's technical specification before it's sent.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 18 GAME: RA vs RegOps -->
+    <section class="slide" id="s18" data-mod="8" data-modname="Regulatory Operations">
+      <div class="inner">
+        <div class="tag game">Game</div>
+        <h2 class="display">Regulatory Affairs or Regulatory Operations?</h2>
+        <p class="lead">Tap a task, then tap the function that owns it.</p>
+        <div class="game-wrap">
+          <div class="game-head"><div class="game-title" id="fb-game5">0 / 6 sorted</div><div class="game-stats"><span class="streakchip" id="g5-streak">streak 0</span></div></div>
+          <div class="bins" style="grid-template-columns:1fr 1fr; display:grid;">
+            <div class="bin" id="bin-RA"><h4>Regulatory Affairs</h4><div class="slot" id="slot-RA"></div></div>
+            <div class="bin" id="bin-OPS"><h4>Regulatory Operations</h4><div class="slot" id="slot-OPS"></div></div>
+          </div>
+          <div class="pool" id="game5-pool"></div>
+          <div class="explain-line" id="g5-explain"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 19 CONCEPT: reg intelligence -->
+    <section class="slide" id="s19" data-mod="9" data-modname="Regulatory Intelligence">
+      <div class="inner">
+        <div class="tag concept">Module 09 · Concept</div>
+        <h2 class="display">What is Regulatory Intelligence?</h2>
+        <p class="lead">The rules keep changing. Regulatory Intelligence (RI) tracks those changes and translates them into action before they become a problem.</p>
+        <div class="cols3">
+          <div class="card"><h3>Guidance monitoring</h3><p>Tracking new and draft guidance documents from every relevant authority.</p></div>
+          <div class="card"><h3>Policy &amp; precedent tracking</h3><p>Watching how agencies are actually deciding cases similar to yours.</p></div>
+          <div class="card"><h3>Competitive intelligence</h3><p>Following what's approved, when, and under what conditions — for similar products.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 20 CASE STUDY 3: new guidance -->
+    <section class="slide" id="s20" data-mod="9" data-modname="Regulatory Intelligence">
+      <div class="inner">
+        <div class="tag case">Case Study 03</div>
+        <h2 class="display">A new draft guidance just changed the rules</h2>
+        <div class="stepdot" id="cs3-dots"><span></span><span></span></div>
+        <div id="cs3-body"></div>
+      </div>
+    </section>
+
+    <!-- 21 CONCEPT: review outcomes -->
+    <section class="slide" id="s21" data-mod="10" data-modname="Submission Review & Outcomes">
+      <div class="inner">
+        <div class="tag concept">Module 10 · Concept</div>
+        <h2 class="display">How review pathways and timelines work</h2>
+        <table class="reg">
+          <tr><th>Region</th><th>Standard timeline</th><th>Expedited option</th></tr>
+          <tr><td>United States (FDA)</td><td>10-month review (PDUFA goal)</td><td>Priority Review (6 months), Breakthrough Therapy, Accelerated Approval</td></tr>
+          <tr><td>European Union (EMA)</td><td>~210 active days for CHMP opinion</td><td>PRIME scheme, accelerated assessment</td></tr>
+          <tr><td>India (CDSCO)</td><td>SEC review, then DCGI decision</td><td>Priority routes for unmet medical need</td></tr>
+        </table>
+        <p style="margin-top:12px; font-size:13.5px; color:var(--ink-soft);">Outcomes: <b>Approval</b> · <b>Complete Response Letter</b> (FDA — fix and resubmit) · <b>Negative opinion / refusal</b> (EMA).</p>
+      </div>
+    </section>
+
+    <!-- 22 GAME: race the clock -->
+    <section class="slide" id="s22" data-mod="10" data-modname="Submission Review & Outcomes">
+      <div class="inner">
+        <div class="tag game">Game</div>
+        <h2 class="display">Race the review clock</h2>
+        <p class="lead" id="rtc-scenario">Scenario loading…</p>
+        <div class="game-wrap">
+          <div id="rtc-options"></div>
+          <div class="consequence" id="rtc-out"></div>
+          <div style="margin-top:12px; display:flex; justify-content:flex-end;"><button class="navbtn secondary" id="rtc-next" onclick="rtcNext()" style="display:none;">Next scenario →</button></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 23 CONCEPT: post-approval -->
+    <section class="slide" id="s23" data-mod="11" data-modname="Post-Approval Activities">
+      <div class="inner">
+        <div class="tag concept">Module 11 · Concept</div>
+        <h2 class="display">Approval is a beginning, not an ending</h2>
+        <div class="cols">
+          <div class="card"><h3>Pharmacovigilance</h3><p>Continuous monitoring of adverse events after launch.</p></div>
+          <div class="card"><h3>PSUR / PBRER</h3><p>Periodic reports summarising the evolving benefit-risk profile.</p></div>
+          <div class="card"><h3>Variations</h3><p>Regulatory approval needed for changes — manufacturing, labeling, indication.</p></div>
+          <div class="card"><h3>Renewals</h3><p>Licences must be periodically renewed to stay valid in most regions.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 24 GAME: sort post-approval tasks -->
+    <section class="slide" id="s24" data-mod="11" data-modname="Post-Approval Activities">
+      <div class="inner">
+        <div class="tag game">Game</div>
+        <h2 class="display">Whose job is this, post-approval?</h2>
+        <p class="lead">Tap a task, then tap the function responsible.</p>
+        <div class="game-wrap">
+          <div class="game-head"><div class="game-title" id="fb-game6">0 / 6 sorted</div><div class="game-stats"><span class="streakchip" id="g6-streak">streak 0</span></div></div>
+          <div class="bins" style="grid-template-columns:repeat(3,1fr); display:grid;">
+            <div class="bin" id="bin-PV"><h4>Pharmacovigilance</h4><div class="slot" id="slot-PV"></div></div>
+            <div class="bin" id="bin-RA2"><h4>Regulatory Affairs</h4><div class="slot" id="slot-RA2"></div></div>
+            <div class="bin" id="bin-CMC2"><h4>CMC / Quality</h4><div class="slot" id="slot-CMC2"></div></div>
+          </div>
+          <div class="pool" id="game6-pool"></div>
+          <div class="explain-line" id="g6-explain"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 25 CASE STUDY 4: post-launch signal -->
+    <section class="slide" id="s25" data-mod="11" data-modname="Post-Approval Activities">
+      <div class="inner">
+        <div class="tag case">Case Study 04</div>
+        <h2 class="display">A safety signal appears after launch</h2>
+        <div class="stepdot" id="cs4-dots"><span></span><span></span></div>
+        <div id="cs4-body"></div>
+      </div>
+    </section>
+
+    <!-- 26 CONCEPT: business needs RA -->
+    <section class="slide" id="s26" data-mod="12" data-modname="Why Business Needs Regulatory">
+      <div class="inner">
+        <div class="tag concept">Module 12 · Concept</div>
+        <h2 class="display">Why every commercial plan needs regulatory input</h2>
+        <div class="cols">
+          <div class="card"><h3>Speed to market = revenue</h3><p>Every month of delay is a month of lost sales and patent life.</p></div>
+          <div class="card"><h3>Avoiding costly rework</h3><p>A weak dossier risks a Complete Response Letter — expensive to fix later than to prevent.</p></div>
+          <div class="card"><h3>Enabling market access</h3><p>Pricing and reimbursement conversations can't start until approval is secured.</p></div>
+          <div class="card"><h3>Protecting the brand</h3><p>Getting safety communication right protects patients — and reputation.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 27 TOOL: cost of delay calculator -->
+    <section class="slide" id="s27" data-mod="12" data-modname="Why Business Needs Regulatory">
+      <div class="inner">
+        <div class="tag tool">Interactive tool</div>
+        <h2 class="display">See the cost of delay, live</h2>
+        <p class="lead">Move the sliders to see how a regulatory delay translates into lost revenue for a hypothetical product.</p>
+        <div class="calc-wrap">
+          <div>
+            <div class="calc-input">
+              <label>Expected peak annual sales (₹ crore)</label>
+              <input type="range" min="10" max="500" value="100" id="calc-sales" oninput="calcUpdate()">
+              <div class="val" id="calc-sales-val">₹100 crore / year</div>
+            </div>
+            <div class="calc-input" style="margin-top:16px;">
+              <label>Months of regulatory delay</label>
+              <input type="range" min="1" max="24" value="6" id="calc-months" oninput="calcUpdate()">
+              <div class="val" id="calc-months-val">6 months</div>
+            </div>
+          </div>
+          <div class="calc-out">
+            <div class="big" id="calc-result">₹50 cr</div>
+            <div class="lbl">estimated revenue exposure from delayed approval</div>
+          </div>
+        </div>
+        <p style="margin-top:14px; font-size:12.5px; color:var(--ink-soft);">Simplified model: (peak annual sales ÷ 12) × months delayed. Real cases also factor ramp-up curves and patent life — but the direction of the number is the point.</p>
+      </div>
+    </section>
+
+    <!-- 28 CONCEPT: market-by-market -->
+    <section class="slide" id="s28" data-mod="13" data-modname="Making a Drug Marketable, Market by Market">
+      <div class="inner">
+        <div class="tag concept">Module 13 · Concept</div>
+        <h2 class="display">Why "approved" isn't the same everywhere</h2>
+        <p class="lead">An approval in one country doesn't automatically make a drug sellable in another. Regulatory affairs manages every local requirement that stands between approval and a patient actually getting the medicine.</p>
+        <div class="cols3">
+          <div class="card"><h3>Local registration</h3><p>A separate application, reviewed by that country's own authority.</p></div>
+          <div class="card"><h3>Manufacturing site GMP</h3><p>The manufacturing site itself may need local certification, not just the product.</p></div>
+          <div class="card"><h3>Labeling &amp; language</h3><p>Local language, local warnings, sometimes locally-required data.</p></div>
+          <div class="card"><h3>Pricing &amp; reimbursement</h3><p>A separate dossier and negotiation, distinct from the regulatory approval itself.</p></div>
+          <div class="card"><h3>Local vigilance obligations</h3><p>Ongoing safety reporting to that specific authority, on its own schedule.</p></div>
+          <div class="card"><h3>Licence renewal</h3><p>Market access has to be actively maintained, not just won once.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 29 GAME: cross-functional map -->
+    <section class="slide" id="s29" data-mod="14" data-modname="Cross-Functional Teamwork">
+      <div class="inner">
+        <div class="tag concept">Module 14 · Concept</div>
+        <h2 class="display">One molecule, many functions</h2>
+        <div class="cols3">
+          <div class="card"><h3>Clinical Ops &amp; Biostatistics</h3><p>Runs the trials, owns the data that proves efficacy and safety.</p></div>
+          <div class="card"><h3>CMC / Quality / Manufacturing</h3><p>Proves the drug can be made consistently at commercial scale.</p></div>
+          <div class="card"><h3>Pharmacovigilance</h3><p>Owns the safety conversation for as long as the product is on the market.</p></div>
+          <div class="card"><h3>Medical Affairs</h3><p>Scientific exchange with prescribers once the product launches.</p></div>
+          <div class="card"><h3>Legal / IP / Market Access</h3><p>Patents, pricing, and the commercial pathway to patients.</p></div>
+          <div class="card" style="background:var(--navy-deep); border:none;"><h3 style="color:#fff;">Regulatory Affairs</h3><p style="color:var(--amber-soft);">Sits in the middle of all of it — translating each function's work into what an agency needs to say yes.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 30 GAME: whose desk -->
+    <section class="slide" id="s30" data-mod="14" data-modname="Cross-Functional Teamwork">
+      <div class="inner">
+        <div class="tag game">Game</div>
+        <h2 class="display">Whose desk does this land on?</h2>
+        <p class="lead">Tap a scenario, then tap the team responsible.</p>
+        <div class="game-wrap">
+          <div class="game-head"><div class="game-title" id="fb-game7">0 / 6 matched</div><div class="game-stats"><span class="streakchip" id="g7-streak">streak 0</span></div></div>
+          <div class="pool" id="game7-pool"></div>
+          <div class="bins" style="grid-template-columns:repeat(3,1fr); display:grid; margin-top:14px;">
+            <div class="bin" id="bin-t-RA"><h4>Regulatory Affairs</h4><div class="slot" id="slot-t-RA"></div></div>
+            <div class="bin" id="bin-t-PV"><h4>Pharmacovigilance</h4><div class="slot" id="slot-t-PV"></div></div>
+            <div class="bin" id="bin-t-CMC"><h4>CMC / Quality</h4><div class="slot" id="slot-t-CMC"></div></div>
+          </div>
+          <div class="explain-line" id="g7-explain"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 31 FINAL QUIZ -->
+    <section class="slide" id="s31" data-mod="15" data-modname="Final Quiz">
+      <div class="inner">
+        <div class="tag game">Final rapid quiz</div>
+        <h2 class="display" id="quiz-title">Question <span id="quiz-num">1</span> of <span id="quiz-total">8</span></h2>
+        <p class="lead" id="quiz-q">Loading…</p>
+        <div class="game-wrap">
+          <div id="quiz-options"></div>
+          <div class="consequence" id="quiz-out"></div>
+          <div style="margin-top:12px; display:flex; justify-content:flex-end;"><button class="navbtn secondary" id="quiz-next" onclick="quizNext()" style="display:none;">Next →</button></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 32 SCORE SUMMARY -->
+    <section class="slide" id="s32" data-mod="15" data-modname="Final Quiz">
+      <div class="inner" style="text-align:center;">
+        <div class="eyebrow">Session complete</div>
+        <h1 class="display" style="text-align:center;">Final score</h1>
+        <div class="mono" id="final-score" style="font-size:70px; text-align:center; color:var(--navy-deep); margin:16px 0;">0</div>
+        <p class="lead" style="text-align:center; margin:0 auto;" id="final-comment">Out of a possible <span id="max-score">0</span> points across every game today.</p>
+      </div>
+    </section>
+
+  </div>
+
+  <div id="navbar">
+    <button class="navbtn secondary" id="prevBtn" onclick="go(-1)">← Back</button>
+    <div id="slide-meta"><span id="dots"></span><span class="mono" id="counter">1 / 33</span></div>
+    <button class="navbtn" id="nextBtn" onclick="go(1)">Next →</button>
+  </div>
+
+</div>
+
+<script>
+/* ================= NAV ================= */
+const slides = Array.from(document.querySelectorAll('.slide'));
+let idx = 0;
+const initialized = new Set();
+let score = 0, maxScore = 0, streak = 0;
+
+function buildModTrack(){
+  const track = document.getElementById('progressline');
+  slides.forEach((s)=>{
+    const seg = document.createElement('div');
+    seg.className='modseg';
+    track.appendChild(seg);
+  });
+}
+buildModTrack();
+function buildDots(){
+  const dots = document.getElementById('dots');
+  slides.forEach((s,i)=>{
+    const d = document.createElement('span');
+    d.className = 'dot' + (i===0?' on':'');
+    dots.appendChild(d);
+  });
+}
+buildDots();
+
+function showSlide(i){
+  slides.forEach((s,n)=> s.classList.toggle('active', n===i));
+  document.getElementById('counter').textContent = (i+1)+' / '+slides.length;
+  document.querySelectorAll('.dot').forEach((d,n)=> d.classList.toggle('on', n===i));
+  document.getElementById('prevBtn').disabled = i===0;
+  document.getElementById('nextBtn').disabled = i===slides.length-1;
+  document.querySelectorAll('.modseg').forEach((seg,n)=> seg.classList.toggle('done', n<=i));
+  document.getElementById('modlabel-float').textContent = 'Module '+slides[i].dataset.mod+' · '+slides[i].dataset.modname;
+  const id = slides[i].id;
+  if(!initialized.has(id)){ initialized.add(id); initSlide(id); }
+  wakeChrome();
+}
+function go(d){
+  const n = idx + d;
+  if(n<0 || n>=slides.length) return;
+  idx = n;
+  showSlide(idx);
+}
+document.addEventListener('keydown', e=>{
+  if(e.key==='ArrowRight') go(1);
+  if(e.key==='ArrowLeft') go(-1);
+  if(e.key.toLowerCase()==='p') togglePresent();
+  wakeChrome();
+});
+
+/* ================= PRESENTATION / FULLSCREEN MODE ================= */
+let chromeTimer = null;
+function wakeChrome(){
+  if(!document.body.classList.contains('presenting')) return;
+  document.getElementById('modlabel-float').classList.add('show');
+  document.getElementById('controls').classList.add('show');
+  document.getElementById('navbar').classList.add('visible');
+  clearTimeout(chromeTimer);
+  chromeTimer = setTimeout(()=>{
+    document.getElementById('modlabel-float').classList.remove('show');
+    document.getElementById('controls').classList.remove('show');
+    document.getElementById('navbar').classList.remove('visible');
+  }, 2600);
+}
+function togglePresent(){
+  if(!document.fullscreenElement){
+    document.documentElement.requestFullscreen().catch(()=>{});
+  } else {
+    document.exitFullscreen();
+  }
+}
+document.addEventListener('fullscreenchange', ()=>{
+  const on = !!document.fullscreenElement;
+  document.body.classList.toggle('presenting', on);
+  document.getElementById('presentBtn').textContent = on ? '⤢ Exit' : '⛶ Present';
+  if(on){ wakeChrome(); } else {
+    document.getElementById('modlabel-float').classList.remove('show');
+    document.getElementById('controls').classList.remove('show');
+    document.getElementById('navbar').classList.remove('visible');
+  }
+});
+document.getElementById('deck').addEventListener('mousemove', wakeChrome);
+document.getElementById('navbar').addEventListener('mousemove', wakeChrome);
+
+function addScore(n){ score += n; document.getElementById('score-val').textContent = score; }
+function bumpStreak(ok, elId){
+  streak = ok ? streak+1 : 0;
+  document.getElementById('streak-val').textContent = streak;
+  if(elId) document.getElementById(elId).textContent = 'streak '+streak;
+  if(ok && streak>0 && streak%3===0) celebrate(12);
+}
+
+/* Confetti */
+function celebrate(n){
+  const colors = ['#E8A23A','#D9503A','#2E8B57','#232A52'];
+  for(let i=0;i<n;i++){
+    const p = document.createElement('div');
+    p.className='confetti-piece';
+    p.style.left = Math.random()*100+'vw';
+    p.style.background = colors[Math.floor(Math.random()*colors.length)];
+    p.style.transform = 'rotate('+(Math.random()*360)+'deg)';
+    document.body.appendChild(p);
+    const duration = 900+Math.random()*700;
+    p.animate([
+      {transform:p.style.transform+' translateY(0)', opacity:1},
+      {transform:p.style.transform+' translateY(100vh)', opacity:0.2}
+    ], {duration:duration, easing:'ease-in'});
+    setTimeout(()=>p.remove(), duration);
+  }
+}
+
+/* ================= SLIDE INIT DISPATCH ================= */
+function initSlide(id){
+  if(id==='s2') initMythFact();
+  if(id==='s3') initFlipGrid();
+  if(id==='s5') initGame0();
+  if(id==='s7') initGame2();
+  if(id==='s9') initCS1();
+  if(id==='s11') initGame1();
+  if(id==='s13') initGame3();
+  if(id==='s14') initCS2();
+  if(id==='s16') initGame4();
+  if(id==='s18') initGame5();
+  if(id==='s20') initCS3();
+  if(id==='s22') initGame4b();
+  if(id==='s24') initGame6();
+  if(id==='s25') initCS4();
+  if(id==='s27') calcUpdate();
+  if(id==='s30') initGame7();
+  if(id==='s31') initQuiz();
+}
+
+/* ================= MYTH VS FACT (s2) ================= */
+const mfItems = [
+  {s:"Regulatory Affairs only gets involved once clinical trials are finished.", a:false, exp:"RA is involved from early discovery — shaping the Target Product Profile and pathway strategy."},
+  {s:"The same drug approved in the US is automatically approved everywhere else.", a:false, exp:"Each region requires its own registration, even if the same clinical data is reused."},
+  {s:"A Complete Response Letter means the drug is permanently rejected.", a:false, exp:"A CRL means 'not yet' — deficiencies must be addressed, then the sponsor can resubmit."},
+  {s:"Pharmacovigilance continues for the entire time a drug is on the market.", a:true, exp:"Correct — safety monitoring never really stops once a product launches."},
+  {s:"CMC stands for Chemistry, Manufacturing and Controls.", a:true, exp:"Correct — and it's the evidence that a drug can be made reliably, not just discovered."}
+];
+let mfIdx = 0;
+function initMythFact(){ mfIdx = 0; streak = 0; loadMf(); }
+function loadMf(){
+  document.getElementById('mf-title').textContent = 'Statement '+(mfIdx+1)+' of '+mfItems.length;
+  document.getElementById('mf-statement').textContent = mfItems[mfIdx].s;
+  document.getElementById('mf-out').classList.remove('show');
+  document.getElementById('mf-out').innerHTML='';
+}
+function mfAnswer(val){
+  const item = mfItems[mfIdx];
+  const ok = val === item.a;
+  bumpStreak(ok,'mf-streak');
+  if(ok){ addScore(10); }
+  maxScore += 10;
+  const out = document.getElementById('mf-out');
+  out.classList.add('show');
+  out.innerHTML = (ok? '<b>Correct — ':'<b>Actually — ')+(item.a?'True.':'False.')+'</b> '+item.exp;
+  setTimeout(()=>{
+    mfIdx++;
+    if(mfIdx < mfItems.length){ loadMf(); }
+    else { out.innerHTML = '<b>Nice work.</b> Now let\'s build the real picture, one concept at a time.'; }
+  }, 1700);
+}
+
+/* ================= FLIP CARDS (s3) ================= */
+const flipData = [
+  {front:'Protects patients', back:'Ensures a medicine\'s benefits genuinely outweigh its risks before and after it reaches anyone.'},
+  {front:'Enables the business', back:'Turns years of R&D investment into an actual product that can legally be sold.'},
+  {front:'Speaks two languages', back:'Translates dense science into what a regulator needs to see — and translates regulation back into what scientists need to do.'}
+];
+function initFlipGrid(){
+  const grid = document.getElementById('flipgrid');
+  grid.innerHTML='';
+  flipData.forEach(d=>{
+    const card = document.createElement('div');
+    card.className='flipcard';
+    card.innerHTML = '<div class="flipinner"><div class="flipface flipfront"><span class="eyebrow">Tap to reveal</span><b>'+d.front+'</b></div><div class="flipface flipback">'+d.back+'</div></div>';
+    card.onclick = ()=> card.classList.toggle('flipped');
+    grid.appendChild(card);
+  });
+}
+
+/* ================= GENERIC SORT ENGINE (used by several games) ================= */
+function makeSortGame(cfg){
+  // cfg: {items:[{t,bin,exp}], pool, feedbackId, streakId, explainId, bins:[binKey...], onComplete}
+  let selected = null, placed = 0;
+  const pool = document.getElementById(cfg.pool);
+  pool.innerHTML='';
+  cfg.items.forEach((it,i)=>{
+    const c = document.createElement('div');
+    c.className='chip'; c.textContent = it.t; c.dataset.idx=i;
+    c.onclick = ()=>{
+      document.querySelectorAll('#'+cfg.pool+' .chip').forEach(x=>x.classList.remove('selected'));
+      c.classList.add('selected'); selected = c;
+    };
+    pool.appendChild(c);
+  });
+  cfg.bins.forEach(b=>{
+    document.getElementById('bin-'+b).onclick = ()=>{
+      if(!selected) return;
+      const i = parseInt(selected.dataset.idx);
+      const item = cfg.items[i];
+      const explainEl = cfg.explainId ? document.getElementById(cfg.explainId) : null;
+      if(item.bin === b){
+        selected.classList.remove('selected'); selected.classList.add('placed');
+        document.getElementById('slot-'+b).appendChild(selected);
+        placed++;
+        bumpStreak(true, cfg.streakId);
+        addScore(10);
+        document.getElementById(cfg.feedbackId).textContent = placed+' / '+cfg.items.length+' — correct.';
+        document.getElementById(cfg.feedbackId).classList.remove('bad');
+        if(explainEl) explainEl.textContent = item.exp || '';
+        if(placed===cfg.items.length){
+          maxScore += cfg.items.length*10;
+          celebrate(24);
+          if(cfg.onComplete) cfg.onComplete();
+        }
+      } else {
+        selected.classList.add('wrongflash');
+        setTimeout(()=>selected.classList.remove('wrongflash'),400);
+        bumpStreak(false, cfg.streakId);
+        document.getElementById(cfg.feedbackId).textContent = 'Not quite — try another bin.';
+        document.getElementById(cfg.feedbackId).classList.add('bad');
+        if(explainEl) explainEl.textContent = item.exp ? 'Hint: '+item.exp : '';
+      }
+      selected = null;
+    };
+  });
+}
+
+/* ---- Game 0: authority <-> region (s5) ---- */
+function initGame0(){
+  const regions = ['United States','European Union','Japan','India'];
+  document.getElementById('game0-bins').innerHTML = regions.map(r=>'<div class="bin" id="bin-'+r.replace(/\s/g,'')+'"><h4>'+r+'</h4><div class="slot" id="slot-'+r.replace(/\s/g,'')+'"></div></div>').join('');
+  const items = [
+    {t:'FDA', bin:'UnitedStates', exp:'FDA regulates drugs, biologics, and more in the United States.'},
+    {t:'EMA', bin:'EuropeanUnion', exp:'EMA coordinates centralised review across EU member states.'},
+    {t:'PMDA', bin:'Japan', exp:"Japan's Pharmaceuticals and Medical Devices Agency."},
+    {t:'CDSCO', bin:'India', exp:'India\'s Central Drugs Standard Control Organisation, under the DCGI.'},
+    {t:'MHRA', bin:'EuropeanUnion', exp:'Historically EU-aligned; now the independent UK regulator post-Brexit — grouped here for simplicity.'},
+    {t:'Health Canada', bin:'UnitedStates', exp:'North American regulator — grouped near FDA for this exercise.'},
+    {t:'NMPA', bin:'Japan', exp:"China's regulator — grouped in the Asia-Pacific bin for this exercise."},
+    {t:'ANVISA', bin:'India', exp:'Brazil\'s regulator — grouped in the emerging-markets bin for this exercise.'}
+  ];
+  makeSortGame({items, pool:'game0-pool', feedbackId:'fb-game0-title', streakId:'g0-streak', explainId:'g0-explain', bins:regions.map(r=>r.replace(/\s/g,''))});
+}
+
+/* ---- Game 1: first-in-human package (s11) ---- */
+function initGame1(){
+  const items = [
+    {t:'Repeat-dose toxicology report', bin:'include', exp:'Required to establish a safe starting dose and monitor for organ toxicity.'},
+    {t:'Safety pharmacology (CV, CNS, respiratory)', bin:'include', exp:'Checks for effects on vital organ systems before human dosing.'},
+    {t:'Genotoxicity study results', bin:'include', exp:'Screens for DNA-damaging potential, a core safety requirement.'},
+    {t:"Investigator's Brochure draft", bin:'include', exp:'Summarises everything known so far for the clinical trial site.'},
+    {t:'Phase III statistical analysis plan', bin:'notyet', exp:'Not needed yet — Phase III is years away at this point.'},
+    {t:'Approved product label text', bin:'notyet', exp:"There's no label until there's an approval."},
+    {t:'Post-marketing REMS plan', bin:'notyet', exp:'A post-approval risk management tool — irrelevant before any human dosing.'},
+    {t:'First-in-human protocol synopsis', bin:'include', exp:'Defines exactly how the first human study will be run.'}
+  ];
+  makeSortGame({items, pool:'game1-pool', feedbackId:'fb-game1', streakId:'g1-streak', explainId:'g1-explain', bins:['include','notyet']});
+}
+
+/* ---- Game 2: sequence discovery (s7) ---- */
+const game2Steps = ['Target identification','Hit finding (screening)','Lead optimization','Candidate selection & preclinical','IND / CTA filed','Phase I trial','Phase II trial','Phase III trial'];
+let g2Placed = [];
+function shuffleArr(a){ const b=[...a]; for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)); [b[i],b[j]]=[b[j],b[i]];} return b; }
+function initGame2(){
+  const shuffled = shuffleArr(game2Steps.map((t,i)=>({t,i})));
+  g2Placed = [];
+  const pool = document.getElementById('game2-pool');
+  pool.innerHTML='';
+  shuffled.forEach(obj=>{
+    const c = document.createElement('div');
+    c.className='chip'; c.textContent = obj.t; c.dataset.i = obj.i;
+    c.onclick = ()=> g2Pick(c, obj.i);
+    pool.appendChild(c);
+  });
+  document.getElementById('game2-order').innerHTML='';
+}
+function g2Pick(chip, i){
+  if(chip.classList.contains('placed')) return;
+  const expected = g2Placed.length;
+  const ol = document.getElementById('game2-order');
+  if(i === expected){
+    chip.classList.add('placed');
+    const li = document.createElement('li');
+    li.className='order-item locked';
+    li.innerHTML = '<span class="idx">'+(expected+1)+'</span>'+game2Steps[i];
+    ol.appendChild(li);
+    g2Placed.push(i);
+    bumpStreak(true,'g2-streak');
+    addScore(10);
+    document.getElementById('fb-game2').textContent = g2Placed.length===game2Steps.length ? 'Perfect sequence!' : (g2Placed.length)+' / '+game2Steps.length+' correct so far';
+    document.getElementById('fb-game2').classList.remove('bad');
+    if(g2Placed.length===game2Steps.length){ maxScore+=game2Steps.length*10; celebrate(24); }
+  } else {
+    chip.classList.add('wrongflash');
+    setTimeout(()=>chip.classList.remove('wrongflash'),400);
+    bumpStreak(false,'g2-streak');
+    document.getElementById('fb-game2').textContent = 'Not the next step — think about what has to happen first.';
+    document.getElementById('fb-game2').classList.add('bad');
+  }
+}
+
+/* ---- Game 3: CMC or not, timed (s13) ---- */
+const game3Items = [
+  {t:'Drug substance synthesis route', bin:'cmc', exp:'Core CMC content — how the active ingredient is made.'},
+  {t:'Stability study data', bin:'cmc', exp:'Shows how long the product stays within spec.'},
+  {t:'Container closure system', bin:'cmc', exp:'Packaging that keeps the product stable — CMC territory.'},
+  {t:'Clinical Overview narrative', bin:'notcmc', exp:'That belongs to Module 2/5 clinical content, not CMC.'},
+  {t:'Patient-reported outcomes questionnaire', bin:'notcmc', exp:'A clinical trial instrument — not manufacturing-related.'},
+  {t:'Manufacturing process validation report', bin:'cmc', exp:'Proves the process reliably produces consistent product.'},
+  {t:'Adverse event case narrative', bin:'notcmc', exp:'Pharmacovigilance content, not CMC.'},
+  {t:'Specifications & analytical methods', bin:'cmc', exp:'Defines the quality limits a batch must meet.'}
+];
+let clockInterval = null;
+function startClock(){
+  clearInterval(clockInterval);
+  let t = 45;
+  document.getElementById('clock-val').textContent = t+'s';
+  document.getElementById('clock-fill').style.width='100%';
+  clockInterval = setInterval(()=>{
+    t--;
+    document.getElementById('clock-val').textContent = Math.max(t,0)+'s';
+    document.getElementById('clock-fill').style.width = Math.max(t/45*100,0)+'%';
+    if(t<=0){ clearInterval(clockInterval); document.getElementById('fb-game3').textContent = "Time's up — see how far you got below."; }
+  },1000);
+}
+function initGame3(){
+  makeSortGame({items:game3Items, pool:'game3-pool', feedbackId:'fb-game3', streakId:'g3-streak', explainId:'g3-explain', bins:['cmc','notcmc'], onComplete:()=>clearInterval(clockInterval)});
+}
+
+/* ---- Game 4: CTD sort (s16) ---- */
+const game4Items = [
+  {t:'Regional application form / labeling', bin:'m1', exp:'Module 1 is region-specific admin content.'},
+  {t:'Clinical Overview', bin:'m2', exp:'A high-level clinical summary lives in Module 2.'},
+  {t:'Quality Overall Summary', bin:'m2', exp:'The quality summary sits in Module 2, above the detailed M3 data.'},
+  {t:'Nonclinical Overview', bin:'m2', exp:'Summarises the nonclinical package at a high level.'},
+  {t:'Drug substance manufacturing data', bin:'m3', exp:'Detailed CMC data belongs in Module 3.'},
+  {t:'Stability study data', bin:'m3', exp:'Also Module 3 — supports shelf-life claims.'},
+  {t:'Repeat-dose toxicology study report', bin:'m4', exp:'Full nonclinical study reports live in Module 4.'},
+  {t:'Genotoxicity study report', bin:'m4', exp:'Another detailed nonclinical report — Module 4.'},
+  {t:'Pivotal Phase III clinical study report', bin:'m5', exp:'Full clinical study reports live in Module 5.'},
+  {t:'Phase I PK study report', bin:'m5', exp:'Also a clinical study report — Module 5.'}
+];
+function initGame4(){
+  makeSortGame({items:game4Items, pool:'game4-pool', feedbackId:'fb-game4', streakId:'g4-streak', explainId:'g4-explain', bins:['m1','m2','m3','m4','m5']});
+}
+
+/* ---- Game 5: RA vs RegOps (s18) ---- */
+const game5Items = [
+  {t:'Deciding which pathway to pursue', bin:'RA', exp:'Strategic decision — Regulatory Affairs owns this.'},
+  {t:'Publishing the dossier into eCTD format', bin:'OPS', exp:'Technical assembly — Regulatory Operations territory.'},
+  {t:'Negotiating with the agency on trial design', bin:'RA', exp:'Strategic and scientific — RA leads these conversations.'},
+  {t:'Validating a submission against agency technical specs', bin:'OPS', exp:'A technical compliance check before transmission.'},
+  {t:'Deciding what claim to seek in the label', bin:'RA', exp:'Strategic content decision — RA.'},
+  {t:'Managing the submission gateway transmission', bin:'OPS', exp:'Operational delivery mechanics — RegOps.'}
+];
+function initGame5(){
+  makeSortGame({items:game5Items, pool:'game5-pool', feedbackId:'fb-game5', streakId:'g5-streak', explainId:'g5-explain', bins:['RA','OPS']});
+}
+
+/* ---- Game 6: post-approval tasks (s24) ---- */
+const game6Items = [
+  {t:'A batch fails a stability specification', bin:'CMC2', exp:'A manufacturing/quality issue — CMC territory.'},
+  {t:'A patient reports a serious adverse event', bin:'PV', exp:'Pharmacovigilance owns adverse event handling.'},
+  {t:'Filing a Type II variation for a new indication', bin:'RA2', exp:'A regulatory filing decision and submission — RA.'},
+  {t:'Compiling the next PSUR', bin:'PV', exp:'Periodic safety reporting is a PV deliverable.'},
+  {t:'Qualifying a new manufacturing site', bin:'CMC2', exp:'Site qualification is CMC/Quality work.'},
+  {t:'Renewing the marketing authorisation', bin:'RA2', exp:'Licence maintenance is a core RA responsibility.'}
+];
+function initGame6(){
+  makeSortGame({items:game6Items, pool:'game6-pool', feedbackId:'fb-game6', streakId:'g6-streak', explainId:'g6-explain', bins:['PV','RA2','CMC2']});
+}
+
+/* ---- Game 7: whose desk (s30) ---- */
+const game7Items = [
+  {t:'A new manufacturing site needs qualifying', bin:'t-CMC', exp:'CMC/Quality territory.'},
+  {t:'A signal needs a PSUR update', bin:'t-PV', exp:'Pharmacovigilance owns signal management and periodic reporting.'},
+  {t:'Agency requests a variation dossier', bin:'t-RA', exp:'Regulatory Affairs prepares and files variations.'},
+  {t:'A batch fails release testing', bin:'t-CMC', exp:'A quality/manufacturing event.'},
+  {t:'A prescriber reports an unexpected reaction', bin:'t-PV', exp:'Adverse event intake and assessment — PV.'},
+  {t:'A CTD Module 1 form needs updating', bin:'t-RA', exp:'Administrative/regulatory content — RA.'}
+];
+function initGame7(){
+  makeSortGame({items:game7Items, pool:'game7-pool', feedbackId:'fb-game7', streakId:'g7-streak', explainId:'g7-explain', bins:['t-RA','t-PV','t-CMC']});
+}
+
+/* ================= MULTI-STEP CASE STUDIES ================= */
+function renderStep(containerId, dotsId, stepIdx, totalSteps, html){
+  document.getElementById(containerId).innerHTML = html;
+  const dots = document.querySelectorAll('#'+dotsId+' span');
+  dots.forEach((d,i)=> d.classList.toggle('on', i===stepIdx));
+}
+
+/* CS1: regulatory strategy (s9) */
+function initCS1(){
+  renderStep('cs1-body','cs1-dots',0,2,
+    '<p class="lead">A new molecule shows strong early efficacy for a serious disease with no existing treatment. What\'s the right first move?</p>'+
+    '<div class="game-wrap"><div id="cs1-opts">'+
+    '<button class="opt-btn" onclick="cs1Step1(0)">File for standard review — no need to raise it with the agency early.</button>'+
+    '<button class="opt-btn" onclick="cs1Step1(1)">Request a meeting to discuss an expedited pathway (e.g. Breakthrough Therapy / PRIME) given the unmet need.</button>'+
+    '<button class="opt-btn" onclick="cs1Step1(2)">Apply for Orphan Drug status regardless of whether the disease is actually rare.</button>'+
+    '</div><div class="consequence" id="cs1-out1"></div></div>'
+  );
+}
+function cs1Step1(choice){
+  document.querySelectorAll('#cs1-opts .opt-btn').forEach((b,i)=>{b.disabled=true; if(i===choice) b.classList.add(choice===1?'correct':'incorrect');});
+  const out = document.getElementById('cs1-out1');
+  out.classList.add('show');
+  maxScore += 20;
+  if(choice===1){
+    addScore(20); bumpStreak(true);
+    out.innerHTML = '<b>Good call.</b> Serious disease + strong early data is exactly when expedited pathways exist to help — closer agency engagement can de-risk the whole programme.';
+  } else if(choice===0){
+    bumpStreak(false);
+    out.innerHTML = '<b>A missed opportunity.</b> Standard review is always available, but this profile is a strong candidate for expedited engagement — worth raising early.';
+  } else {
+    bumpStreak(false);
+    out.innerHTML = '<b>Not quite.</b> Orphan status applies specifically to rare diseases — applying without meeting that criterion wastes agency goodwill and time.';
+  }
+  setTimeout(()=> cs1Step2(), 1400);
+}
+function cs1Step2(){
+  renderStep('cs1-body','cs1-dots',1,2,
+    '<p class="lead">The team secures Breakthrough Therapy designation. Next: which regions should the filing sequence prioritise first?</p>'+
+    '<div class="game-wrap"><div id="cs1-opts2">'+
+    '<button class="opt-btn" onclick="cs1Step2Answer(0)">File everywhere simultaneously on day one, regardless of readiness.</button>'+
+    '<button class="opt-btn" onclick="cs1Step2Answer(1)">Prioritise the region with the clearest expedited pathway and largest addressable population, then sequence others based on data readiness and local requirements.</button>'+
+    '<button class="opt-btn" onclick="cs1Step2Answer(2)">Wait until every region\'s dossier is 100% ready before filing anywhere.</button>'+
+    '</div><div class="consequence" id="cs1-out2"></div></div>'
+  );
+}
+function cs1Step2Answer(choice){
+  document.querySelectorAll('#cs1-opts2 .opt-btn').forEach((b,i)=>{b.disabled=true; if(i===choice) b.classList.add(choice===1?'correct':'incorrect');});
+  const out = document.getElementById('cs1-out2');
+  out.classList.add('show');
+  maxScore += 20;
+  if(choice===1){
+    addScore(20); bumpStreak(true); celebrate(16);
+    out.innerHTML = '<b>This is real-world strategy.</b> Sequencing by pathway advantage and readiness is exactly how global filing plans get built — not everywhere at once, not one at a time either.';
+  } else {
+    bumpStreak(false);
+    out.innerHTML = '<b>Reconsider.</b> Filing everywhere unprepared risks rejections; waiting for perfect global readiness delays patients unnecessarily. The real answer is a deliberately sequenced plan.';
+  }
+}
+
+/* CS2: manufacturing change (s14) */
+function initCS2(){
+  renderStep('cs2-body','cs2-dots',0,2,
+    '<p class="lead">A manufacturing site wants to switch to a new equipment supplier for a non-critical processing step, with no change to the drug\'s specifications. First question: how significant is this change?</p>'+
+    '<div class="game-wrap"><div id="cs2-opts">'+
+    '<button class="opt-btn" onclick="cs2Step1(0)">Minor — it doesn\'t affect the product\'s quality attributes.</button>'+
+    '<button class="opt-btn" onclick="cs2Step1(1)">Major — any equipment change automatically requires full re-approval.</button>'+
+    '</div><div class="consequence" id="cs2-out1"></div></div>'
+  );
+}
+function cs2Step1(choice){
+  document.querySelectorAll('#cs2-opts .opt-btn').forEach((b,i)=>{b.disabled=true; if(i===choice) b.classList.add(choice===0?'correct':'incorrect');});
+  const out = document.getElementById('cs2-out1');
+  out.classList.add('show');
+  maxScore += 20;
+  if(choice===0){
+    addScore(20); bumpStreak(true);
+    out.innerHTML = '<b>Correct.</b> Changes that don\'t affect quality attributes are typically classified as minor.';
+  } else {
+    bumpStreak(false);
+    out.innerHTML = '<b>Not quite.</b> Not every equipment change is major — classification depends on impact to product quality, not the change itself.';
+  }
+  setTimeout(()=> cs2Step2(), 1400);
+}
+function cs2Step2(){
+  renderStep('cs2-body','cs2-dots',1,2,
+    '<p class="lead">Given it\'s minor, which mechanism is the right one to notify the change through (using EU terminology)?</p>'+
+    '<div class="game-wrap"><div id="cs2-opts2">'+
+    '<button class="opt-btn" onclick="cs2Step2Answer(0)">Type IA/IB variation — a minor-change notification.</button>'+
+    '<button class="opt-btn" onclick="cs2Step2Answer(1)">Type II variation — reserved for major changes.</button>'+
+    '<button class="opt-btn" onclick="cs2Step2Answer(2)">A brand-new marketing authorisation application.</button>'+
+    '</div><div class="consequence" id="cs2-out2"></div></div>'
+  );
+}
+function cs2Step2Answer(choice){
+  document.querySelectorAll('#cs2-opts2 .opt-btn').forEach((b,i)=>{b.disabled=true; if(i===choice) b.classList.add(choice===0?'correct':'incorrect');});
+  const out = document.getElementById('cs2-out2');
+  out.classList.add('show');
+  maxScore += 20;
+  if(choice===0){
+    addScore(20); bumpStreak(true); celebrate(16);
+    out.innerHTML = '<b>Exactly right.</b> Type IA/IB variations exist precisely for minor changes like this — lighter process, faster turnaround.';
+  } else {
+    bumpStreak(false);
+    out.innerHTML = '<b>Overkill.</b> Type II and new applications are reserved for changes with real impact on quality, safety or efficacy — not this one.';
+  }
+}
+
+/* CS3: new guidance (s20) */
+function initCS3(){
+  renderStep('cs3-body','cs3-dots',0,2,
+    '<p class="lead">A major agency publishes new draft guidance that changes labeling expectations for your drug class. What does Regulatory Intelligence do first?</p>'+
+    '<div class="game-wrap"><div id="cs3-opts">'+
+    '<button class="opt-btn" onclick="cs3Step1(0)">Ignore it — it\'s only in draft, not final.</button>'+
+    '<button class="opt-btn" onclick="cs3Step1(1)">Assess its relevance and likely impact on current products and pipeline, and flag it internally.</button>'+
+    '</div><div class="consequence" id="cs3-out1"></div></div>'
+  );
+}
+function cs3Step1(choice){
+  document.querySelectorAll('#cs3-opts .opt-btn').forEach((b,i)=>{b.disabled=true; if(i===choice) b.classList.add(choice===1?'correct':'incorrect');});
+  const out = document.getElementById('cs3-out1');
+  out.classList.add('show');
+  maxScore += 20;
+  if(choice===1){
+    addScore(20); bumpStreak(true);
+    out.innerHTML = '<b>Right.</b> Draft guidance often signals where final expectations are heading — early assessment lets teams prepare rather than react.';
+  } else {
+    bumpStreak(false);
+    out.innerHTML = '<b>Risky.</b> Draft guidance frequently becomes final with few changes — waiting means scrambling later instead of planning now.';
+  }
+  setTimeout(()=> cs3Step2(), 1400);
+}
+function cs3Step2(){
+  renderStep('cs3-body','cs3-dots',1,2,
+    '<p class="lead">The impact assessment confirms it will affect your product\'s label. What happens next?</p>'+
+    '<div class="game-wrap"><div id="cs3-opts2">'+
+    '<button class="opt-btn" onclick="cs3Step2Answer(0)">RI hands a summary to Regulatory Affairs and relevant stakeholders to plan a labeling update proactively.</button>'+
+    '<button class="opt-btn" onclick="cs3Step2Answer(1)">Nothing — wait for the agency to force a change later.</button>'+
+    '</div><div class="consequence" id="cs3-out2"></div></div>'
+  );
+}
+function cs3Step2Answer(choice){
+  document.querySelectorAll('#cs3-opts2 .opt-btn').forEach((b,i)=>{b.disabled=true; if(i===choice) b.classList.add(choice===0?'correct':'incorrect');});
+  const out = document.getElementById('cs3-out2');
+  out.classList.add('show');
+  maxScore += 20;
+  if(choice===0){
+    addScore(20); bumpStreak(true); celebrate(16);
+    out.innerHTML = '<b>This is the whole point of RI.</b> Turning external change into an internal action plan before it becomes a compliance problem.';
+  } else {
+    bumpStreak(false);
+    out.innerHTML = '<b>Reactive, not proactive.</b> Waiting to be forced into a change usually costs more time and credibility than planning ahead.';
+  }
+}
+
+/* CS4: post-launch signal (s25) */
+function initCS4(){
+  renderStep('cs4-body','cs4-dots',0,2,
+    '<p class="lead">Six months after launch, a pattern emerges in spontaneous adverse event reports suggesting a possible drug interaction. What\'s the right first step?</p>'+
+    '<div class="game-wrap"><div id="cs4-opts">'+
+    '<button class="opt-btn" onclick="cs4Step1(0)">Wait for the next scheduled PSUR before assessing anything.</button>'+
+    '<button class="opt-btn" onclick="cs4Step1(1)">Run a signal evaluation now to determine if the pattern is real and causally plausible.</button>'+
+    '</div><div class="consequence" id="cs4-out1"></div></div>'
+  );
+}
+function cs4Step1(choice){
+  document.querySelectorAll('#cs4-opts .opt-btn').forEach((b,i)=>{b.disabled=true; if(i===choice) b.classList.add(choice===1?'correct':'incorrect');});
+  const out = document.getElementById('cs4-out1');
+  out.classList.add('show');
+  maxScore += 20;
+  if(choice===1){
+    addScore(20); bumpStreak(true);
+    out.innerHTML = '<b>Correct.</b> Signal evaluation is continuous, not scheduled — real patterns deserve immediate assessment.';
+  } else {
+    bumpStreak(false);
+    out.innerHTML = '<b>Too slow.</b> PSURs summarise ongoing safety monitoring — they aren\'t a reason to delay assessing a live signal.';
+  }
+  setTimeout(()=> cs4Step2(), 1400);
+}
+function cs4Step2(){
+  renderStep('cs4-body','cs4-dots',1,2,
+    '<p class="lead">The signal is confirmed as real. What\'s the appropriate action?</p>'+
+    '<div class="game-wrap"><div id="cs4-opts2">'+
+    '<button class="opt-btn" onclick="cs4Step2Answer(0)">Update the label with an interaction warning and notify prescribers.</button>'+
+    '<button class="opt-btn" onclick="cs4Step2Answer(1)">Immediately withdraw the product from every market.</button>'+
+    '</div><div class="consequence" id="cs4-out2"></div></div>'
+  );
+}
+function cs4Step2Answer(choice){
+  document.querySelectorAll('#cs4-opts2 .opt-btn').forEach((b,i)=>{b.disabled=true; if(i===choice) b.classList.add(choice===0?'correct':'incorrect');});
+  const out = document.getElementById('cs4-out2');
+  out.classList.add('show');
+  maxScore += 20;
+  if(choice===0){
+    addScore(20); bumpStreak(true); celebrate(16);
+    out.innerHTML = '<b>Proportionate and correct.</b> A confirmed, manageable interaction is typically addressed through labeling and communication — withdrawal is reserved for risks that can\'t be mitigated this way.';
+  } else {
+    bumpStreak(false);
+    out.innerHTML = '<b>Disproportionate.</b> Withdrawal removes a needed treatment from patients unnecessarily when the risk can be safely managed through labeling.';
+  }
+}
+
+/* ================= RACE THE CLOCK (s22) ================= */
+const rtcScenarios = [
+  {
+    q:"A molecule targets a serious, life-threatening disease with no existing treatment, and shows unusually strong early data. Which pathway fits best?",
+    opts:[
+      {t:"Standard review — take the full timeline, no shortcuts.", ok:false, fb:"Safe, but this profile is exactly what expedited pathways exist for — a missed opportunity."},
+      {t:"Pursue Breakthrough Therapy / PRIME designation for closer agency engagement and a faster path.", ok:true, fb:"Right call — serious disease plus compelling data is the textbook case for an expedited pathway."},
+      {t:"File for Accelerated Approval without first agreeing a surrogate endpoint with the agency.", ok:false, fb:"Accelerated Approval requires prior agreement on a validated surrogate — skipping that conversation invites a rejection."}
+    ]
+  },
+  {
+    q:"Phase III data is solid but unremarkable — a genuine improvement, not a breakthrough, for a well-served condition. What's the realistic pathway?",
+    opts:[
+      {t:"Standard review pathway — no designation applies, and that's fine.", ok:true, fb:"Correct — not every good medicine needs, or qualifies for, an expedited pathway."},
+      {t:"Apply for Breakthrough Therapy anyway.", ok:false, fb:"Agencies scrutinise unsupported designation requests — it costs credibility without changing the outcome."},
+      {t:"Request Orphan Drug status to speed things up.", ok:false, fb:"Orphan status applies to rare diseases with small populations — it doesn't fit here."}
+    ]
+  }
+];
+let rtcIdx = 0;
+function initGame4b(){ rtcIdx = 0; loadRtc(); }
+function loadRtc(){
+  const s = rtcScenarios[rtcIdx];
+  document.getElementById('rtc-scenario').textContent = s.q;
+  const wrap = document.getElementById('rtc-options');
+  wrap.innerHTML='';
+  document.getElementById('rtc-out').classList.remove('show');
+  document.getElementById('rtc-out').innerHTML='';
+  document.getElementById('rtc-next').style.display='none';
+  s.opts.forEach((o)=>{
+    const b = document.createElement('button');
+    b.className='opt-btn'; b.textContent=o.t;
+    b.onclick=()=>{
+      document.querySelectorAll('#rtc-options .opt-btn').forEach(x=>x.disabled=true);
+      b.classList.add(o.ok?'correct':'incorrect');
+      const out = document.getElementById('rtc-out');
+      out.classList.add('show');
+      out.textContent = o.fb;
+      bumpStreak(o.ok);
+      if(o.ok){ addScore(15); celebrate(14); }
+      maxScore+=15;
+      document.getElementById('rtc-next').style.display = rtcIdx < rtcScenarios.length-1 ? 'inline-block':'none';
+    };
+    wrap.appendChild(b);
+  });
+}
+function rtcNext(){ rtcIdx++; if(rtcIdx<rtcScenarios.length) loadRtc(); }
+
+/* ================= COST OF DELAY CALCULATOR (s27) ================= */
+function calcUpdate(){
+  const sales = parseInt(document.getElementById('calc-sales').value);
+  const months = parseInt(document.getElementById('calc-months').value);
+  document.getElementById('calc-sales-val').textContent = '₹'+sales+' crore / year';
+  document.getElementById('calc-months-val').textContent = months+' month'+(months>1?'s':'');
+  const loss = Math.round((sales/12)*months);
+  document.getElementById('calc-result').textContent = '₹'+loss+' cr';
+}
+
+/* ================= FINAL QUIZ (s31) ================= */
+const quizQs = [
+  {q:"What does CTD stand for?", opts:["Clinical Trial Document","Common Technical Document","Controlled Trial Data","Certified Testing Dossier"], correct:1},
+  {q:"Which CTD module contains full clinical study reports?", opts:["Module 2","Module 3","Module 4","Module 5"], correct:3},
+  {q:"An FDA Complete Response Letter means:", opts:["Permanent rejection","Approval with conditions","Deficiencies must be resolved before approval","The IND is on clinical hold"], correct:2},
+  {q:"CMC data primarily supports which claim?", opts:["The drug works","The drug can be made consistently and safely","The drug is priced fairly","The drug is patentable"], correct:1},
+  {q:"Regulatory Intelligence is best described as:", opts:["Writing the dossier","Monitoring external regulatory change and translating it into action","Running clinical trials","Manufacturing quality control"], correct:1},
+  {q:"A Type IA/IB variation (EU) is used for:", opts:["Minor post-approval changes","A brand-new drug application","A first-in-human filing","A pricing negotiation"], correct:0},
+  {q:"What is the main job of Regulatory Operations?", opts:["Deciding scientific strategy","Negotiating with agencies on trial design","Technically assembling and transmitting the submission","Running Phase III trials"], correct:2},
+  {q:"Why doesn't approval in one country guarantee sales in another?", opts:["It does guarantee it","Each country requires its own registration and local requirements","Only price differs, not approval","Regulatory bodies share one database"], correct:1}
+];
+let quizIdx = 0;
+function initQuiz(){ quizIdx = 0; document.getElementById('quiz-total').textContent = quizQs.length; loadQuiz(); }
+function loadQuiz(){
+  const item = quizQs[quizIdx];
+  document.getElementById('quiz-num').textContent = quizIdx+1;
+  document.getElementById('quiz-q').textContent = item.q;
+  const wrap = document.getElementById('quiz-options');
+  wrap.innerHTML='';
+  document.getElementById('quiz-out').classList.remove('show');
+  document.getElementById('quiz-out').innerHTML='';
+  document.getElementById('quiz-next').style.display='none';
+  item.opts.forEach((o,i)=>{
+    const b = document.createElement('button');
+    b.className='opt-btn'; b.textContent=o;
+    b.onclick=()=>{
+      document.querySelectorAll('#quiz-options .opt-btn').forEach(x=>x.disabled=true);
+      b.classList.add(i===item.correct?'correct':'incorrect');
+      if(i!==item.correct){ wrap.children[item.correct].classList.add('correct'); bumpStreak(false); }
+      else { addScore(15); bumpStreak(true); celebrate(10); }
+      maxScore+=15;
+      const out = document.getElementById('quiz-out');
+      out.classList.add('show');
+      out.textContent = i===item.correct ? 'Correct!' : 'Not quite — correct answer highlighted above.';
+      document.getElementById('quiz-next').style.display='inline-block';
+      if(quizIdx===quizQs.length-1){ document.getElementById('quiz-next').textContent = 'See final score →'; }
+    };
+    wrap.appendChild(b);
+  });
+}
+function quizNext(){
+  quizIdx++;
+  if(quizIdx < quizQs.length){ loadQuiz(); }
+  else {
+    document.getElementById('final-score').textContent = score;
+    const pct = maxScore ? Math.round(score/maxScore*100) : 0;
+    document.getElementById('final-comment').innerHTML = 'Out of a possible <span id="max-score">'+maxScore+'</span> points across every game today — that\'s '+pct+'%. '+(pct>=80?'Outstanding regulatory instincts.':pct>=60?'Solid grasp of the fundamentals.':'A great start — the real learning happens on the job.');
+    celebrate(40);
+    go(1);
+  }
+}
+
+/* init */
+showSlide(0);
+</script>
+</body>
+</html>
