@@ -26,11 +26,12 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      # enablement: true makes the workflow turn Pages on via the API if the
-      # site does not exist yet, instead of failing on "Get Pages site failed".
+      # Requires Pages to already be enabled with source "GitHub Actions"
+      # (Settings -> Pages). Do not add `enablement: true` to auto-enable it:
+      # creating a Pages site needs admin rights, and `administration` is not a
+      # grantable key in a workflow permissions block, so GITHUB_TOKEN fails
+      # with "Resource not accessible by integration". It would need a PAT.
       - uses: actions/configure-pages@v5
-        with:
-          enablement: true
 
       - name: Upload site
         uses: actions/upload-pages-artifact@v3

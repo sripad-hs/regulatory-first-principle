@@ -50,17 +50,24 @@ inlined, so the file opens standalone from disk too.
 
 ## Publishing setup
 
-No manual setup needed. The workflow passes `enablement: true` to
-`actions/configure-pages`, so the first run turns Pages on via the API and points
-it at the Actions build — then deploys. Watch it under the **Actions** tab; the
-run prints the live URL when it finishes.
+One manual step, once — GitHub will not let a workflow enable Pages on its own:
 
-If you ever want to check or change it by hand, it lives at
-**Settings → Pages → Build and deployment**, which should read *GitHub Actions*.
+**Settings → Pages → Build and deployment → Source → GitHub Actions**
 
-Note that Pages on a **private** repo requires a paid plan (Pro/Team/Enterprise).
-This repo is public, so that does not apply — but if it is ever made private on a
-free plan, the deploy will start failing.
+Until that is set, every run fails at `configure-pages` with *"Get Pages site
+failed ... verify that the repository has Pages enabled"*. After setting it,
+re-run the workflow from the **Actions** tab; the run prints the live URL when it
+finishes, and every later push deploys automatically.
+
+(`actions/configure-pages` has an `enablement: true` option that sounds like it
+removes this step, but creating a Pages site requires admin rights that
+`GITHUB_TOKEN` cannot be granted — it fails with *"Resource not accessible by
+integration"*. Automating it would mean storing a personal access token, which is
+more setup than the one-time toggle.)
+
+Pages on a **private** repo also requires a paid plan. This repo is public, so
+that does not apply today — but making it private on a free plan would break the
+deploy.
 
 ## Local preview
 
