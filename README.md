@@ -1,10 +1,12 @@
 # Regulatory Affairs, From First Principles
 
-An interactive primer for new Regulatory Affairs professionals — 16 modules that
+An interactive field guide for new Regulatory Affairs professionals — 16 modules that
 each take three angles on a topic: a concept explainer, a hands-on game, and a
 real-world case or tool.
 
 **Live site:** https://sripad-hs.github.io/regulatory-first-principle/
+
+Created by [Sripad HS](https://www.linkedin.com/in/hssripad/).
 
 ## What's inside
 
@@ -40,7 +42,7 @@ It ends with a scored quiz that tallies points earned across every game.
 ## Repo layout
 
 ```
-index.html                   the entire primer — self-contained HTML/CSS/JS
+index.html                   the entire guide — self-contained HTML/CSS/JS
 .nojekyll                    serve files as-is, no Jekyll processing
 .github/workflows/pages.yml  builds and deploys the site on push
 ```
