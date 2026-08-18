@@ -50,16 +50,17 @@ inlined, so the file opens standalone from disk too.
 
 ## Publishing setup
 
-The workflow deploys on every push, but GitHub needs to be told to use it once:
+No manual setup needed. The workflow passes `enablement: true` to
+`actions/configure-pages`, so the first run turns Pages on via the API and points
+it at the Actions build — then deploys. Watch it under the **Actions** tab; the
+run prints the live URL when it finishes.
 
-**Settings → Pages → Build and deployment → Source → GitHub Actions**
+If you ever want to check or change it by hand, it lives at
+**Settings → Pages → Build and deployment**, which should read *GitHub Actions*.
 
-After that, check the run under the **Actions** tab — it prints the live URL when
-it finishes.
-
-Note that this repo is currently private, and Pages on a private repo requires a
-paid plan (Pro/Team/Enterprise). On a free plan, make the repo public first —
-otherwise the deploy step has nowhere to publish to.
+Note that Pages on a **private** repo requires a paid plan (Pro/Team/Enterprise).
+This repo is public, so that does not apply — but if it is ever made private on a
+free plan, the deploy will start failing.
 
 ## Local preview
 
