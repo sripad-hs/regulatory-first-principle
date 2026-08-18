@@ -1,0 +1,42 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+      - claude/github-pages-setup-y58j4v
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow one concurrent deployment; queued runs supersede each other.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v5
+
+      # Requires Pages to already be enabled with source "GitHub Actions"
+      # (Settings -> Pages). Do not add `enablement: true` to auto-enable it:
+      # creating a Pages site needs admin rights, and `administration` is not a
+      # grantable key in a workflow permissions block, so GITHUB_TOKEN fails
+      # with "Resource not accessible by integration". It would need a PAT.
+      - uses: actions/configure-pages@v5
+
+      - name: Upload site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
