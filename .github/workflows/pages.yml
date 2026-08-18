@@ -3,8 +3,9 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches:
+      # Only the default branch can deploy: enabling Pages restricts the
+      # github-pages environment to it, so runs from other branches fail.
       - main
-      - claude/github-pages-setup-y58j4v
   workflow_dispatch:
 
 permissions:
